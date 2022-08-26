@@ -17,11 +17,14 @@ import XMonad.Hooks.ManageDocks
 import XMonad.Hooks.ManageHelpers
 import XMonad.Hooks.StatusBar
 import XMonad.Hooks.StatusBar.PP
+import XMonad.Hooks.SetWMName
 import XMonad.Layout.Grid
 import XMonad.Layout.IM
 import XMonad.Layout.IfMax
+import qualified XMonad.Layout.Magnifier as Mag
 import XMonad.Layout.Named
 import XMonad.Layout.NoBorders
+import XMonad.Layout.OneBig
 import XMonad.Layout.PerWorkspace
 import XMonad.Prompt
 import XMonad.Prompt.AppendFile
@@ -72,9 +75,10 @@ promptedShift = workspacePrompt def $ windows . W.shift
 myLayoutHook = avoidStruts
              $ layouts
     where
-        layouts = fullif ||| noBorders Full ||| tiled ||| Mirror tiled ||| Grid
+        layouts = fullif ||| noBorders Full ||| Mirror fullif ||| onebig
         fullif = named "FullIf" $ IfMax 1 (noBorders Full) tiled
-        tiled = Tall nmaster delta ratio
+        tiled = Mag.magnifiercz' 1.4 $ Tall nmaster delta ratio
+        onebig = Mag.magnifiercz' 1.4 $ OneBig (3/4) (3/4)
         nmaster = 1
         ratio = 1/2
         delta = 3/100
@@ -99,9 +103,10 @@ myKeys conf = let
 
     in
     subKeys "System"
-    [ ("<XF86AudioLowerVolume>",    addName "Volume down"      $ spawn "amixer -D pulse set Master 2%-")
-    , ("<XF86AudioRaiseVolume>",    addName "Volume up"        $ spawn "amixer -D pulse set Master 2%+")
-    , ("<XF86AudioMute>",           addName "Mute/Unmute"      $ spawn "amixer -D pulse set Master toggle")
+    [ ("<XF86AudioLowerVolume>", addName "Volume down" $ spawn "amixer -D pulse set Master 2%-")
+    , ("<XF86AudioRaiseVolume>", addName "Volume up"   $ spawn "amixer -D pulse set Master 2%+")
+    , ("<XF86AudioMute>",        addName "Mute/Unmute" $ spawn "amixer -D pulse set Master toggle")
+    , ("M-S-;",                  addName "Display off" $ spawn "sleep 2 && xset dpms force off")
     ] ^++^
 
     subKeys "Display"
@@ -125,6 +130,9 @@ myKeys conf = let
     , ("M-C-<D>",   addName "Move float down"              $ withFocused (keysMoveWindow (0, 10)))
     , ("M-C-<L>",   addName "Move float left"              $ withFocused (keysMoveWindow (-10, 0)))
     , ("M-C-<R>",   addName "Move float right"             $ withFocused (keysMoveWindow (10, 0)))
+    , ("M-C-m",     addName "Toggle magnification"         $ sendMessage Mag.Toggle)
+    , ("M-C-i",     addName "Increase magnification"       $ sendMessage Mag.MagnifyMore)
+    , ("M-C-o",     addName "Decrease magnification"       $ sendMessage Mag.MagnifyLess)
     ] ^++^
 
     subKeys "Workspaces"
@@ -172,9 +180,12 @@ myconfig = def
   , terminal = "gnome-terminal"
   , borderWidth = 2
   , focusFollowsMouse = False
+  -- focus AND pass click through
+  , clickJustFocuses = False
   , focusedBorderColor = "#cd8b00"
   , workspaces = topicNames topicItems
   , manageHook = insertPosition End Newer
+  , startupHook = setWMName "LG3D"
   }
 
 main :: IO ()
