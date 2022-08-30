@@ -23,9 +23,12 @@ import XMonad.Layout.IM
 import XMonad.Layout.IfMax
 import qualified XMonad.Layout.Magnifier as Mag
 import XMonad.Layout.Named
+import XMonad.Layout.Renamed
 import XMonad.Layout.NoBorders
 import XMonad.Layout.OneBig
 import XMonad.Layout.PerWorkspace
+import XMonad.Layout.ThreeColumns
+import XMonad.Layout.Spacing
 import XMonad.Prompt
 import XMonad.Prompt.AppendFile
 import XMonad.Prompt.Shell
@@ -72,16 +75,40 @@ promptedShift :: X ()
 promptedShift = workspacePrompt def $ windows . W.shift
 
 -- == Layout ==
+mySpacing = spacingRaw True (Border 3 3 3 3) True (Border 3 3 3 3) True
+nmaster = 1
+ratio = 1/2
+delta = 3/100
+magnification = 1.7
+
+threecol = renamed [Replace "[3c]"]
+         $ smartBorders
+         $ mySpacing
+         $ Mag.magnifiercz' magnification
+         $ ThreeColMid nmaster delta ratio
+
+
+tiled = renamed [Replace "[tall]"]
+      $ mySpacing
+      $ Mag.magnifiercz' magnification
+      $ Tall nmaster delta ratio
+
+full = renamed[Replace "[full]"]
+     $ noBorders Full
+
+fullif = renamed [Replace "[fif]"]
+       $ IfMax 1 full tiled
+
+onebig = renamed [Replace "[1b]"]
+       $ smartBorders
+       $ mySpacing
+       $ Mag.magnifiercz' magnification
+       $ OneBig (3/4) (3/4)
+
 myLayoutHook = avoidStruts
              $ layouts
     where
-        layouts = fullif ||| noBorders Full ||| Mirror fullif ||| onebig
-        fullif = named "FullIf" $ IfMax 1 (noBorders Full) tiled
-        tiled = Mag.magnifiercz' 1.4 $ Tall nmaster delta ratio
-        onebig = Mag.magnifiercz' 1.4 $ OneBig (3/4) (3/4)
-        nmaster = 1
-        ratio = 1/2
-        delta = 3/100
+        layouts = threecol ||| fullif ||| full ||| onebig
 
 -- == Keybindings ==
 myModMask = mod4Mask
@@ -143,12 +170,11 @@ myKeys conf = let
 
     subKeys "Launchers"
     [ ("M-o",  addName "Rofi" $ spawn "rofi -theme purple -matching fuzzy -modi combi -show combi -combi-modi run,drun")
+    , ("M-p",  addName "Rofi" $ spawn "rofi -theme purple -matching fuzzy -modi combi -show combi -combi-modi run,drun")
     ]
         where
             toggleCopyToAll = wsContainingCopies >>= \ws -> case ws of
                 [] -> windows copyToAll
-                _ -> killAllOtherCopies
-
 
 myXmobarPP :: PP
 myXmobarPP = def
@@ -181,7 +207,7 @@ myconfig = def
   , borderWidth = 2
   , focusFollowsMouse = False
   -- focus AND pass click through
-  , clickJustFocuses = False
+  , clickJustFocuses = True
   , focusedBorderColor = "#cd8b00"
   , workspaces = topicNames topicItems
   , manageHook = insertPosition End Newer
@@ -192,6 +218,6 @@ main :: IO ()
 main = xmonad
      . ewmhFullscreen
      . ewmh
-     . withEasySB (statusBarProp "xmobar" (pure myXmobarPP)) defToggleStrutsKey
+     . withEasySB (statusBarProp "/home/matt/.local/bin/xmobar" (pure myXmobarPP)) defToggleStrutsKey
      . addDescrKeys ((myModMask, xK_F1), showKeybindings) myKeys
      $ myconfig
